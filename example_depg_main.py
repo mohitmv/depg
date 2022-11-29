@@ -14,7 +14,7 @@ This will update the targets in a/b/BUILD and z/BUILD as per changed files.
 import argparse
 import os
 
-import depg.depg as depg
+import depg.depg_lib_main as depg
 
 def getConfigs():
     configs = depg.getDefaultConfigs()

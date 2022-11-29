@@ -17,7 +17,7 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + "/../../../.."))
 
-import depg.depg as depg
+import depg.depg_lib_main as depg
 
 def getConfigs():
     configs = depg.getDefaultConfigs()
