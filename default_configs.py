@@ -63,7 +63,7 @@ def getDefaultConfigs():
 
     configs.INCLUDE_PATHS = []
 
-    configs.CC_FLAGS = []
+    configs.CXX_FLAGS = []
 
     configs.LINK_FLAGS = []
 

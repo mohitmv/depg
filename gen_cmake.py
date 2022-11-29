@@ -128,7 +128,7 @@ def mergeListOfList(list_of_list):
     return output
 
 
-CPP_EXECUTABLE_DEPS_COVER_GO_IN = set([TargetType.CPP_SOURCE, TargetType.NOP_TARGET, TargetType.PROTO_LIBRARY, TargetType.GRPC_LIBRARY])
+CPP_EXECUTABLE_DEPS_COVER_GO_IN = set([TargetType.CPP_SOURCE, TargetType.NOP_TARGET, TargetType.PROTO_LIBRARY, TargetType.GRPC_LIBRARY, TargetType.CPP_SHARED_LIB, TargetType.CPP_STATIC_LIB])
 
 def combineFields(targets_map, field):
     output = []
@@ -151,13 +151,18 @@ class CMakeFileGen:
     def makeCMakeMetaDecl(self):
         if self.configs.INCLUDE_PATHS:
             self.cmake_decl.append(("include_directories", (self.configs.INCLUDE_PATHS)))
+        if self.configs.CXX_FLAGS:
+            joined = ' '.join(self.configs.CXX_FLAGS)
+            self.cmake_decl.append(("set", ["CMAKE_CXX_FLAGS", f'"{joined}"']))
 
     def makeCMakeTargetDecl(self):
         for _, target in self.targets_map.items():
             if target.type == TargetType.CPP_SOURCE:
                 self.handleCppSource(target)
             elif target.type in [TargetType.CPP_EXECUTABLE, TargetType.CPP_TEST]:
-                self.handleCppExecutable(target)
+                self.handleCppExecutableOrSharedLib(target, is_shared_lib=False)
+            elif target.type == TargetType.CPP_SHARED_LIB:
+                self.handleCppExecutableOrSharedLib(target, is_shared_lib=True)
             elif target.type in [TargetType.PROTO_LIBRARY, TargetType.GRPC_LIBRARY]:
                 self.handleProtoLibrary(target)
             else:
@@ -180,9 +185,12 @@ class CMakeFileGen:
             cmake_i_deps.append(target.library)
         self.cmake_i_deps_map[target.name] = cmake_i_deps
 
-    def handleCppExecutable(self, target):
+    def handleCppExecutableOrSharedLib(self, target, is_shared_lib):
         cmake_tname = target["name"].replace("/", "_")
-        self.cmake_decl.append(("add_executable", [cmake_tname] + target["srcs"]))
+        if is_shared_lib:
+            self.cmake_decl.append(("add_library", [cmake_tname, "SHARED"] + target["srcs"]))
+        else:
+            self.cmake_decl.append(("add_executable", [cmake_tname] + target["srcs"]))
         public_deps_map = self.publicDepsCoverTargetMap(target["name"])
         deps_map = self.depsCoverTargetMap(target["name"])
         link_flags = combineFields(deps_map, "link_flags")
@@ -196,25 +204,31 @@ class CMakeFileGen:
             self.cmake_decl.append(("target_link_libraries", elms))
 
     def depsCoverTargetMap(self, tname):
-        target_names = algorithms.topologicalSortedDepsCover([tname], self.cppDepsCoverEdgeFunc)
+        target_names = algorithms.topologicalSortedDepsCover(
+                self.cppDepsCoverEdgeFunc(tname, direct=True),
+                self.cppDepsCoverEdgeFunc)
         return collections.OrderedDict((x, self.targets_map[x]) for x in target_names)
 
     def publicDepsCoverTargetMap(self, tname):
         # Even for public deps, start with all direct deps.
         target_names = algorithms.topologicalSortedDepsCover(
-                self.cppDepsCoverEdgeFunc(tname), self.cppPublicDepsCoverEdgeFunc)
+                self.cppDepsCoverEdgeFunc(tname, direct=True), self.cppPublicDepsCoverEdgeFunc)
         return collections.OrderedDict((x, self.targets_map[x]) for x in target_names)
 
     def filterDepsInCppDepsCoverPath(self, deps):
         return [dep for dep in deps if self.targets_map[dep].type in CPP_EXECUTABLE_DEPS_COVER_GO_IN]
 
-    def cppPublicDepsCoverEdgeFunc(self, tname):
+    def cppPublicDepsCoverEdgeFunc(self, tname, direct=False):
         target = self.targets_map[tname]
+        if not direct and target.type in [TargetType.CPP_SHARED_LIB, TargetType.CPP_STATIC_LIB]:
+            return []
         deps = target.get("public_deps", [])
         return self.filterDepsInCppDepsCoverPath(deps)
 
-    def cppDepsCoverEdgeFunc(self, tname):
+    def cppDepsCoverEdgeFunc(self, tname, direct=False):
         target = self.targets_map[tname]
+        if not direct and target.type in [TargetType.CPP_SHARED_LIB, TargetType.CPP_STATIC_LIB]:
+            return []
         deps = target.get("public_deps", []) + target.get("private_deps", [])
         return self.filterDepsInCppDepsCoverPath(deps)
 

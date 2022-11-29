@@ -24,7 +24,7 @@ def getConfigs():
     configs.THIRD_PARTY_TARGET_BUILD_FILES = []
     configs.TOP_DIRECTORY_LIST = ["dir1", "dir2", "dir_main"]
     configs.INCLUDE_PATHS = [ "." ]
-    configs.CC_FLAGS = []
+    configs.CXX_FLAGS = ["-fPIC"]
     configs.LINK_FLAGS = []
     return configs
 
