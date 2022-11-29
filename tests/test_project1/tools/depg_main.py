@@ -13,13 +13,19 @@ This will update the targets in a/b/BUILD and z/BUILD as per changed files.
 
 import argparse
 import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + "/../../../.."))
 
 import depg.depg as depg
 
 def getConfigs():
     configs = depg.getDefaultConfigs()
-    configs.THIRD_PARTY_TARGET_BUILD_FILES = ["third_party/targets/BUILD"]
-    configs.TOP_DIRECTORY_LIST = ["sage", "common", "testing", "third_party"]
+    configs.THIRD_PARTY_TARGET_BUILD_FILES = []
+    configs.TOP_DIRECTORY_LIST = ["dir1", "dir2", "dir_main"]
+    configs.INCLUDE_PATHS = [ "." ]
+    configs.CC_FLAGS = []
+    configs.LINK_FLAGS = []
     return configs
 
 
@@ -44,7 +50,7 @@ def getArgs():
     return parser.parse_args()
 
 def main():
-    source_directory = os.path.abspath("ms/ctwik_experimental")
+    source_directory = os.path.abspath(os.path.dirname(__file__) + "/..")
     os.chdir(source_directory)
     args = getArgs()
     configs = getConfigs()

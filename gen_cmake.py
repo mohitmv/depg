@@ -137,12 +137,22 @@ def combineFields(targets_map, field):
     return output
 
 class CMakeFileGen:
-    def __init__(self, targets_map):
+    def __init__(self, configs, targets_map):
+        self.configs = configs
         self.targets_map = targets_map
         self.cmake_i_deps_map = {}
         self.cmake_decl = []
 
     def makeCMakeDecl(self):
+        self.makeCMakeMetaDecl()
+        self.makeCMakeTargetDecl()
+        return self.cmake_decl
+
+    def makeCMakeMetaDecl(self):
+        if self.configs.INCLUDE_PATHS:
+            self.cmake_decl.append(("include_directories", (self.configs.INCLUDE_PATHS)))
+
+    def makeCMakeTargetDecl(self):
         for _, target in self.targets_map.items():
             if target.type == TargetType.CPP_SOURCE:
                 self.handleCppSource(target)
@@ -152,7 +162,6 @@ class CMakeFileGen:
                 self.handleProtoLibrary(target)
             else:
                 assert False, target
-        return self.cmake_decl
 
     def handleProtoLibrary(self, target):
         self.cmake_i_deps_map[target.name] = []
@@ -211,7 +220,7 @@ class CMakeFileGen:
 
 
 def unparseCmakeDecl(cmake_decl, project_name="x"):
-    output = "cmake_minimum_required(VERSION 3.20)\n"
+    output = "cmake_minimum_required(VERSION 3.1)\n"
     output += f"project({project_name})\n"
     for (name, args) in cmake_decl:
         output += f"{name}({' '.join(args)})\n"
@@ -220,7 +229,7 @@ def unparseCmakeDecl(cmake_decl, project_name="x"):
 
 def genCmake(targets_n_dirs, configs, cmake_build_dir):
     targets_map = readTargets(targets_n_dirs, configs)
-    cmake_file_gen = CMakeFileGen(targets_map)
+    cmake_file_gen = CMakeFileGen(configs, targets_map)
     os.makedirs(cmake_build_dir, exist_ok=True)
     cmake_decl = cmake_file_gen.makeCMakeDecl()
     cmake_file_content = unparseCmakeDecl(cmake_decl)

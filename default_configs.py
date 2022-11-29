@@ -61,6 +61,12 @@ def getDefaultConfigs():
     configs.THIRD_PARTY_TARGET_BUILD_FILES = []
     configs.HEADER_PREFIXES_MAP = None
 
+    configs.INCLUDE_PATHS = []
+
+    configs.CC_FLAGS = []
+
+    configs.LINK_FLAGS = []
+
     configs.GTEST_MAIN_TARGET = None # "testing/gtest/gtest_with_glog_main"
 
     configs.SYS_STD_HEADERS = set(std_headers.STD_HEADERS) | set(std_headers.SYSTEM_HEADERS)
