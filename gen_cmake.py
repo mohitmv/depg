@@ -136,6 +136,11 @@ def combineFields(targets_map, field):
         output.extend(target.get(field, []))
     return output
 
+def makeCMakeValuesString(values):
+    values_str = ' '.join(values)
+    return f'"{values_str}"'
+
+
 class CMakeFileGen:
     def __init__(self, configs, targets_map):
         self.configs = configs
@@ -153,7 +158,7 @@ class CMakeFileGen:
             self.cmake_decl.append(("include_directories", (self.configs.INCLUDE_PATHS)))
         if self.configs.CXX_FLAGS:
             joined = ' '.join(self.configs.CXX_FLAGS)
-            self.cmake_decl.append(("set", ["CMAKE_CXX_FLAGS", f'"{joined}"']))
+            self.cmake_decl.append(("set", ["CMAKE_CXX_FLAGS", makeCMakeValuesString(self.configs.CXX_FLAGS)]))
 
     def makeCMakeTargetDecl(self):
         for _, target in self.targets_map.items():
@@ -171,15 +176,22 @@ class CMakeFileGen:
     def handleProtoLibrary(self, target):
         self.cmake_i_deps_map[target.name] = []
 
+    def addCompileOptions(self, cmake_tname, cc_flags):
+        if cc_flags:
+            self.cmake_decl.append(("target_compile_options",
+                    [cmake_tname, "PRIVATE"] + cc_flags))
+
+
     def handleCppSource(self, target):
         cmake_i_deps = []
         if "srcs" in target:
             cmake_tname = target.name.replace("/", "_")
             elms = [cmake_tname, "OBJECT"]
             elms.extend(target.srcs)
-            public_deps_map = self.publicDepsCoverTargetMap(target["name"])
+            public_deps_map = self.publicDepsCoverTargetMap(target)
             cc_flags = combineFields(public_deps_map, "public_cc_flags") + target.get("private_cc_flags", [])
             self.cmake_decl.append(("add_library", elms))
+            self.addCompileOptions(cmake_tname, cc_flags)
             cmake_i_deps.append(cmake_tname)
         if "library" in target:
             cmake_i_deps.append(target.library)
@@ -187,50 +199,56 @@ class CMakeFileGen:
 
     def handleCppExecutableOrSharedLib(self, target, is_shared_lib):
         cmake_tname = target["name"].replace("/", "_")
-        if is_shared_lib:
-            self.cmake_decl.append(("add_library", [cmake_tname, "SHARED"] + target["srcs"]))
-        else:
-            self.cmake_decl.append(("add_executable", [cmake_tname] + target["srcs"]))
-        public_deps_map = self.publicDepsCoverTargetMap(target["name"])
-        deps_map = self.depsCoverTargetMap(target["name"])
+        public_deps_map = self.publicDepsCoverTargetMap(target)
+        deps_map = self.depsCoverTargetMap(target)
         link_flags = combineFields(deps_map, "link_flags")
         cc_flags = combineFields(public_deps_map, "public_cc_flags") + target.get("private_cc_flags", [])
         include_paths = combineFields(public_deps_map, "public_include_paths") + target.get("private_include_paths", [])
-        elms = [cmake_tname]
-        [elms.extend(self.cmake_i_deps_map[tname]) for tname, x in deps_map.items() if tname != target.name]
-        elms.extend(link_flags)
+        elms1 = [cmake_tname] + (["SHARED"] if is_shared_lib else [])
+        elms1.extend(target["srcs"])
+        self.cmake_decl.append(("add_library" if is_shared_lib else "add_executable", elms1))
+        self.addCompileOptions(cmake_tname, cc_flags)
+        elms2 = [cmake_tname]
+        [elms2.extend(self.cmake_i_deps_map[tname]) for tname, x in deps_map.items() if tname != target.name]
+        elms2.extend(link_flags)
         self.cmake_i_deps_map[target.name] = [cmake_tname]
-        if len(elms) > 1:
-            self.cmake_decl.append(("target_link_libraries", elms))
+        if len(elms2) > 1:
+            self.cmake_decl.append(("target_link_libraries", elms2))
 
-    def depsCoverTargetMap(self, tname):
+    def depsCoverTargetMap(self, target):
         target_names = algorithms.topologicalSortedDepsCover(
-                self.cppDepsCoverEdgeFunc(tname, direct=True),
+                self.filteredAllDeps(target),
                 self.cppDepsCoverEdgeFunc)
+        target_names.append(target.name)
         return collections.OrderedDict((x, self.targets_map[x]) for x in target_names)
 
-    def publicDepsCoverTargetMap(self, tname):
+    def publicDepsCoverTargetMap(self, target):
         # Even for public deps, start with all direct deps.
         target_names = algorithms.topologicalSortedDepsCover(
-                self.cppDepsCoverEdgeFunc(tname, direct=True), self.cppPublicDepsCoverEdgeFunc)
+                self.filteredAllDeps(target),
+                self.cppPublicDepsCoverEdgeFunc)
+        target_names.append(target.name)
         return collections.OrderedDict((x, self.targets_map[x]) for x in target_names)
 
     def filterDepsInCppDepsCoverPath(self, deps):
         return [dep for dep in deps if self.targets_map[dep].type in CPP_EXECUTABLE_DEPS_COVER_GO_IN]
 
-    def cppPublicDepsCoverEdgeFunc(self, tname, direct=False):
+    def cppPublicDepsCoverEdgeFunc(self, tname):
         target = self.targets_map[tname]
-        if not direct and target.type in [TargetType.CPP_SHARED_LIB, TargetType.CPP_STATIC_LIB]:
+        if target.type in [TargetType.CPP_SHARED_LIB, TargetType.CPP_STATIC_LIB]:
             return []
         deps = target.get("public_deps", [])
         return self.filterDepsInCppDepsCoverPath(deps)
 
-    def cppDepsCoverEdgeFunc(self, tname, direct=False):
-        target = self.targets_map[tname]
-        if not direct and target.type in [TargetType.CPP_SHARED_LIB, TargetType.CPP_STATIC_LIB]:
-            return []
+    def filteredAllDeps(self, target):
         deps = target.get("public_deps", []) + target.get("private_deps", [])
         return self.filterDepsInCppDepsCoverPath(deps)
+
+    def cppDepsCoverEdgeFunc(self, tname):
+        target = self.targets_map[tname]
+        if target.type in [TargetType.CPP_SHARED_LIB, TargetType.CPP_STATIC_LIB]:
+            return []
+        return self.filteredAllDeps(target)
 
 
 def unparseCmakeDecl(cmake_decl, project_name="x"):
