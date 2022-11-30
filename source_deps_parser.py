@@ -105,10 +105,12 @@ class SourceDepsParser:
                     name=target)
         if common.hasExtensions(header, configs.CPP_HEADER_EXTENSIONS):
             if not os.path.isfile(header):
-                full_path_header = os.path.relpath(os.path.join(
-                    os.path.dirname(source_file), header))
-                if os.path.isfile(full_path_header):
-                    header = full_path_header
+                for ip in [os.path.dirname(source_file)] + configs.INCLUDE_PATHS:
+                    relpath = os.path.relpath(ip + "/" + header)
+                    assert not relpath.startswith("../")
+                    if os.path.isfile(relpath):
+                        header = relpath
+                        break
             if os.path.isfile(header):
                 return dict(
                     type=TargetType.CPP_SOURCE,

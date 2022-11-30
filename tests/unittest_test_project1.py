@@ -23,6 +23,7 @@ START dir1_f2
 dir1_f1
 END dir1_f2
 START dir2_shared_lib
+common_stuff
 START dir2_f1
 dir1_f1
 END dir2_f1
@@ -49,7 +50,7 @@ def replaceTargetType(content, target_name, old_type, new_type):
 
 
 class TestProject1(unittest.TestCase):
-    build_files = ["dir1/BUILD", "dir2/BUILD", "dir_main/BUILD"]
+    build_files = ["dir1/BUILD", "dir2/BUILD", "dir_main/BUILD", "common/BUILD"]
 
     def assertClean(self):
         for build_file in self.build_files:

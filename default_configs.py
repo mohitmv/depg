@@ -61,7 +61,7 @@ def getDefaultConfigs():
     configs.THIRD_PARTY_TARGET_BUILD_FILES = []
     configs.HEADER_PREFIXES_MAP = None
 
-    configs.INCLUDE_PATHS = []
+    configs.INCLUDE_PATHS = [ "." ]
 
     configs.CXX_FLAGS = []
 
