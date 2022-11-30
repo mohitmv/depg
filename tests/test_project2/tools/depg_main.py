@@ -22,7 +22,9 @@ import depg.depg_lib_main as depg
 def getConfigs():
     configs = depg.getDefaultConfigs()
     configs.THIRD_PARTY_TARGET_BUILD_FILES = []
-    configs.TOP_DIRECTORY_LIST = ["dir1"]
+    configs.TOP_DIRECTORY_LIST = ["dir1", "dir2", "dir_main", "common"]
+    configs.INCLUDE_PATHS = [ ".", "common" ]
+    configs.CXX_FLAGS = ["-fPIC"]
     configs.LINK_FLAGS = []
     return configs
 
