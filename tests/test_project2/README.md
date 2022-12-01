@@ -1,3 +1,5 @@
+- Test the use of SharedLib targets and dependencies.
+
 Deps Graph: 
 
 dir1/f1 ; deps = []

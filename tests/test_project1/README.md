@@ -1,3 +1,5 @@
+A simple and basic unit test of DepG
+
 Deps Graph: 
 
 dir1/f1 ; deps = []

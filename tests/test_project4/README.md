@@ -1,6 +1,4 @@
-- Test the use of private_cc_flags and public_cc_flags and how they are
-  propogated.
-
+- Test the usage of third-party libs.
 
 Deps Graph: 
 

@@ -182,6 +182,11 @@ class CMakeFileGen:
                     [cmake_tname, "PRIVATE"] + cc_flags))
 
 
+    def addIncludePaths(self, cmake_tname, include_paths):
+        if include_paths:
+            self.cmake_decl.append(("target_include_directories",
+                    [cmake_tname, "PRIVATE"] + include_paths))
+
     def handleCppSource(self, target):
         cmake_i_deps = []
         if "srcs" in target:
@@ -190,11 +195,18 @@ class CMakeFileGen:
             elms.extend(target.srcs)
             public_deps_map = self.publicDepsCoverTargetMap(target)
             cc_flags = combineFields(public_deps_map, "public_cc_flags") + target.get("private_cc_flags", [])
+            include_paths = combineFields(public_deps_map, "public_include_paths") + target.get("private_include_paths", [])
             self.cmake_decl.append(("add_library", elms))
             self.addCompileOptions(cmake_tname, cc_flags)
+            self.addIncludePaths(cmake_tname, include_paths)
             cmake_i_deps.append(cmake_tname)
         if "library" in target:
-            cmake_i_deps.append(target.library)
+            if type(target.library) is str:
+                cmake_i_deps.append(target.library)
+            elif type(target.library) is list:
+                cmake_i_deps.extend(target.library)
+            else:
+                assert False
         self.cmake_i_deps_map[target.name] = cmake_i_deps
 
     def handleCppExecutableOrSharedLib(self, target, is_shared_lib):
@@ -208,6 +220,8 @@ class CMakeFileGen:
         elms1.extend(target["srcs"])
         self.cmake_decl.append(("add_library" if is_shared_lib else "add_executable", elms1))
         self.addCompileOptions(cmake_tname, cc_flags)
+        print("include_paths = ", include_paths, target.name)
+        self.addIncludePaths(cmake_tname, include_paths)
         elms2 = [cmake_tname]
         [elms2.extend(self.cmake_i_deps_map[tname]) for tname, x in deps_map.items() if tname != target.name]
         elms2.extend(link_flags)
@@ -255,6 +269,7 @@ def unparseCmakeDecl(cmake_decl, project_name="x"):
     output = "cmake_minimum_required(VERSION 3.1)\n"
     output += f"project({project_name})\n"
     for (name, args) in cmake_decl:
+        print(args)
         output += f"{name}({' '.join(args)})\n"
     return output
 
