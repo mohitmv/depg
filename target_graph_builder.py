@@ -28,6 +28,7 @@ def combinedList(a, b):
         return a
     return a + b
 
+
 def fileToTarget(file, configs):
     if common.hasExtensions(file, configs.CPP_EXTENSIONS):
         return common.trimExtensions(file, configs.CPP_EXTENSIONS)
@@ -35,25 +36,6 @@ def fileToTarget(file, configs):
         return file
     return None
 
-def getTopLevelForbiddenDirs(configs):
-    """
-    List of the top level directories (i.e. directly present in git root),
-    which are not the source code, hence forbidden for build systems and DepG.
-    """
-    output = set()
-    for i in os.listdir("."):
-        if i.startswith("."):
-            output.add(i)
-            continue
-        for j in configs.FORBIDDEN_TOP_LEVEL_DIRS_STARTS_WITH:
-            if i.startswith(j):
-                output.add(i)
-                break
-    return output
-
-def getAllForbiddenPaths(configs):
-    return (set(common.toRelativePaths(configs.FORBIDDEN_PATHS))
-            | getTopLevelForbiddenDirs(configs))
 
 def listDirectoryRecursive(directory, forbidden_paths, ignored_paths):
     """
@@ -104,33 +86,8 @@ def listDirectoryRecursive(directory, forbidden_paths, ignored_paths):
             output.append(file_path)
     return output
 
-def expandTargets(target_names_or_dirs, configs, excluded_input_targets=()):
-    """
-    Given a list of directories or target names, expand the list by
-    translating directories to list of targets in that directory, considering
-    all targets recursively in that directory.
-    """
-    output = utils.OrderedSet()
-    common.assertRelativePaths(configs.IGNORED_PATHS)
-    excluded = set(common.toRelativePaths(excluded_input_targets))
-    excluded |= getAllForbiddenPaths(configs)
-    for input_target in target_names_or_dirs:
-        input_target = os.path.relpath(input_target)
-        if os.path.isdir(input_target):
-            files = listDirectoryRecursive(input_target, excluded,
-                                           configs.IGNORED_PATHS)
-            for file in files:
-                target = fileToTarget(file, self.configs)
-                if target is not None:
-                    output.add(target)
-        else:
-            target = input_target.replace(":", "/")
-            if (target not in excluded) and (input_target not in excluded):
-                output.add(target)
-    output = list(output)
-    return output
 
-def changedPathsToTargetNames(input_paths, configs, excluded_paths=()):
+def changedPathsToTargetNames(input_paths, configs):
     """
     Given a list of files or directory (i.e. paths), return the list of target
     names corresponding to those files. When directories are given in input,
@@ -146,18 +103,17 @@ def changedPathsToTargetNames(input_paths, configs, excluded_paths=()):
                     relative w.r.t git-root.
     """
     common.assertRelativePaths(configs.IGNORED_PATHS)
-    excluded = set(common.toRelativePaths(excluded_paths))
-    excluded |= getAllForbiddenPaths(configs)
+    common.assertRelativePaths(configs.FORBIDDEN_PATHS)
     files = utils.OrderedSet()
     for path in input_paths:
         path = os.path.relpath(path)
         if os.path.isfile(path):
-            if path not in excluded:
+            if path not in configs.FORBIDDEN_PATHS:
                 files.add(path)
         else:
             assert os.path.isdir(path)
             new_files = listDirectoryRecursive(
-                path, excluded, configs.IGNORED_PATHS)
+                path, configs.FORBIDDEN_PATHS, configs.IGNORED_PATHS)
             [files.add(x) for x in new_files]
     output = utils.OrderedSet()
     for file in files:
@@ -166,8 +122,10 @@ def changedPathsToTargetNames(input_paths, configs, excluded_paths=()):
             output.add(target)
     return list(output)
 
+
 def getCacheFile(cache_directory):
     return cache_directory.rstrip("/") + "/cache.json"
+
 
 def loadCacheData(file):
     if os.path.isfile(file):

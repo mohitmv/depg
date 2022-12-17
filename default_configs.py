@@ -15,22 +15,10 @@ def customHeaderIdentificationHandler(header):
 
 def getDefaultConfigs():
     configs = Object()
-    # Top level directories starting with any of these strings are not
-    # source code directory. Build system should ignore them. DepG should not
-    # visit these directories to generate targets.
-    #
-    # Note: The enteries listed here are checked as string-prefix
-    #       not the path prefix.
-    # Eg : ("ab/cd" is a path-prefix of path "ab/cd/xyz.txt")
-    # Eg : ("ab/c" is NOT a path-prefix of path "ab/cd/xyz.txt")
-    # Eg : ("ab/c" is a string-prefix of path "ab/cd/xyz.txt")
-    # Eg : ("ab/cd/" is a path-prefix of path "ab/cd/xyz.txt")
-    # Eg : ("ab/cd/xyz.txt" is a path-prefix of path "ab/cd/xyz.txt")
-    #
-    # Hence top level directories like `build-out`, `build-dbg`,
-    # `build-x` etc. will be forbidden.
-    configs.FORBIDDEN_TOP_LEVEL_DIRS_STARTS_WITH = ("build", "third-party", "tools")
-
+    # These top level directories are not source code directory. Build system
+    # should ignore them. DepG should not visit these directories to generate
+    # targets. Hence top level directories like `build/`, `third_party`,
+    # `tools` etc. should be forbidden.
     configs.FORBIDDEN_PATHS = set([])
 
     # Ignored paths are different from forbidden paths. These paths will be ignored
