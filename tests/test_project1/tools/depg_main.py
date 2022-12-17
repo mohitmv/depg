@@ -23,7 +23,6 @@ def getConfigs():
     configs = depg.getDefaultConfigs()
     configs.THIRD_PARTY_TARGET_BUILD_FILES = []
     configs.TOP_DIRECTORY_LIST = ["dir1"]
-    configs.LINK_FLAGS = []
     return configs
 
 
@@ -41,10 +40,7 @@ def getArgs():
              "Default: Current directory. A custom directory like '/tmp/abc' "
              "can be used here to only dump the generated BUILD files without "
              "overwriting the existing BUILD files.")
-    parser.add_argument("--dont_gen_build", action='store_true', default=False)
-    parser.add_argument("--gen_cmake", action='store_true', default=False)
     parser.add_argument("--force_override_build_files", action='store_true', default=False)
-    parser.add_argument("--cmake_build_dir", default="build")
     return parser.parse_args()
 
 def main():
@@ -54,10 +50,7 @@ def main():
     configs = getConfigs()
     configs.force_override_build_files = args.force_override_build_files
     depg_main = depg.Depg(source_directory, configs)
-    if not args.dont_gen_build:
-        depg_main.regenerateBuildFiles(args.paths, args.output_directory)
-    if args.gen_cmake:
-        depg_main.genCmake(args.paths, args.cmake_build_dir)
+    depg_main.regenerateBuildFiles(args.paths, args.output_directory)
 
 if __name__ == "__main__":
     main()

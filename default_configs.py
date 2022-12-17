@@ -51,6 +51,7 @@ def getDefaultConfigs():
 
     configs.IGNORED_HEADERS = set(["options.pb.h"])
 
+    configs.INCLUDE_PATHS = [ "." ]
 
     configs.IGNORE_EXISTANCE = set([])
 
@@ -60,12 +61,6 @@ def getDefaultConfigs():
 
     configs.THIRD_PARTY_TARGET_BUILD_FILES = []
     configs.HEADER_PREFIXES_MAP = None
-
-    configs.INCLUDE_PATHS = [ "." ]
-
-    configs.CXX_FLAGS = []
-
-    configs.LINK_FLAGS = []
 
     configs.GTEST_MAIN_TARGET = None # "testing/gtest/gtest_with_glog_main"
 

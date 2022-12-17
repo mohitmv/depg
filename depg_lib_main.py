@@ -17,7 +17,6 @@ from .default_configs import getDefaultConfigs
 from . import merge_build_file
 from . import parser
 from . import common
-from . import gen_cmake
 
 
 def getHeaderPrefixesMap(third_p_build_files):
@@ -71,6 +70,3 @@ class Depg:
         merge_build_file.regenerateBuildFiles(build_files_map,
                 output_directory=output_directory,
                 force_override_build_files=self.configs.force_override_build_files)
-
-    def genCmake(self, targets_n_dirs, cmake_build_dir="build"):
-        gen_cmake.genCmake(targets_n_dirs, self.configs, cmake_build_dir)
