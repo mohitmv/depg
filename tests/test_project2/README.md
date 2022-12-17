@@ -1,4 +1,4 @@
-- Test the use of SharedLib targets and dependencies.
+- Test that if a target is converted to SharedLib, it remains stable when depg is ran again.
 
 Deps Graph: 
 

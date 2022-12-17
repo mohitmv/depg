@@ -6,69 +6,137 @@ import os
 import shutil
 
 
-PROJECT1_MAIN1_OUTPUT = """\
-START dir1_main
-dir1_f1
-START dir1_f2
-dir1_f1
-END dir1_f2
-END dir1_main
+PROJECT1_DIR1_BUILD = """\
+#! /usr/bin/env python3
+
+# Semi Auto-generated file ; Don't edit ; Learn more at docs/depg.md
+
+CppSource(
+    name = "f2",
+    hdrs = [ "f2.hpp" ],
+    srcs = [ "f2.cpp" ],
+    private_deps = [ ":f1" ])
+
+CppSource(
+    name = "f1",
+    hdrs = [ "f1.hpp" ],
+    srcs = [ "f1.cpp" ])
+
+CppExecutable(
+    name = "main1",
+    srcs = [ "main1.cpp" ],
+    private_deps = [ ":f1",
+                     ":f2" ])
+
 """
 
-PROJECT2_MAIN1_OUTPUT = """\
-START dir1_f2
-dir1_f1
-END dir1_f2
-START dir1_f3
-START dir1_f2
-dir1_f1
-END dir1_f2
-END dir1_f3
+PROJECT2_DIR1_BUILD = """\
+#! /usr/bin/env python3
+
+# Semi Auto-generated file ; Don't edit ; Learn more at docs/depg.md
+
+CppSource(
+    name = "f1",
+    hdrs = [ "f1.hpp" ],
+    srcs = [ "f1.cpp" ])
+
+CppSource(
+    name = "f2",
+    hdrs = [ "f2.hpp" ],
+    srcs = [ "f2.cpp" ],
+    private_deps = [ ":f1" ])
+
+CppSource(
+    name = "f3",
+    hdrs = [ "f3.hpp" ],
+    srcs = [ "f3.cpp" ],
+    private_deps = [ ":f2" ])
+
 """
 
-PROJECT2_MAIN2_OUTPUT = """\
-START dir1_f2
-dir1_f1
-END dir1_f2
-START dir2_shared_lib
-common_stuff
-START dir2_f1
-dir1_f1
-END dir2_f1
-dir2_f2
-END dir2_shared_lib
+PROJECT2_DIR2_BUILD = """\
+#! /usr/bin/env python3
+
+# Semi Auto-generated file ; Don't edit ; Learn more at docs/depg.md
+
+CppSource(
+    name = "f1",
+    hdrs = [ "f1.hpp" ],
+    srcs = [ "f1.cpp" ],
+    private_deps = [ "dir1:f1" ])
+
+CppSource(
+    name = "f2",
+    hdrs = [ "f2.hpp" ],
+    srcs = [ "f2.cpp" ],
+    private_deps = [ ":f1" ])
+
+CppSharedLib(
+    name = "shared_lib",
+    hdrs = [ "shared_lib.hpp" ],
+    srcs = [ "shared_lib.cpp" ],
+    private_deps = [ ":f1",
+                     ":f2",
+                     "common:common_stuff" ])
+
 """
 
-PROJECT3_MAIN1_OUTPUT = """\
-START dir1_main
-dir1_f1: PUBLIC_F1_FLAG = 5
-dir1_f1: PRIVATE_F1_FLAG = 8
-START dir1_f2
-dir1_f1: PUBLIC_F1_FLAG = 5
-dir1_f1: PRIVATE_F1_FLAG = 8
-dir1_f2: PUBLIC_F1_FLAG = 5
-dir1_f2: PRIVATE_F1_FLAG not defined 
-dir1_f2: PUBLIC_F2_FLAG = 17
-dir1_f2: PRIVATE_F2_FLAG = 18
-END dir1_f2
-dir1_main1: PUBLIC_F1_FLAG = 5
-dir1_main1: PRIVATE_F1_FLAG not defined 
-dir1_main1: PUBLIC_F2_FLAG = 17
-dir1_main1: PRIVATE_F2_FLAG not defined 
-dir1_main1: PUBLIC_MAIN_FLAG = 27
-dir1_main1: PRIVATE_MAIN_FLAG = 28
-END dir1_main
+PROJECT2_DIR_MAIN_BUILD = """\
+#! /usr/bin/env python3
+
+# Semi Auto-generated file ; Don't edit ; Learn more at docs/depg.md
+
+CppExecutable(
+    name = "main1",
+    srcs = [ "main1.cpp" ],
+    private_deps = [ "dir1:f2",
+                     "dir1:f3" ])
+
+CppExecutable(
+    name = "main2",
+    srcs = [ "main2.cpp" ],
+    private_deps = [ "dir1:f2",
+                     "dir2:shared_lib" ])
+
 """
 
-PROJECT4_MAIN1_OUTPUT = """\
-START dir1_main
-dir1_f1: libA() = libA
-dir1_f1: libB() = libB
-START dir1_f2
-dir1_f1: libA() = libA
-dir1_f1: libB() = libB
-END dir1_f2
-END dir1_main
+PROJECT2_COMMON_BUILD = """\
+#! /usr/bin/env python3
+
+# Semi Auto-generated file ; Don't edit ; Learn more at docs/depg.md
+
+CppSource(
+    name = "common_stuff",
+    hdrs = [ "common_stuff.h" ],
+    srcs = [ "common_stuff.cpp" ])
+
+"""
+
+
+
+PROJECT4_DIR1_BUILD = """\
+#! /usr/bin/env python3
+
+# Semi Auto-generated file ; Don't edit ; Learn more at docs/depg.md
+
+CppSource(
+    name = "f1",
+    hdrs = [ "f1.hpp" ],
+    srcs = [ "f1.cpp" ],
+    private_deps = [ "third_party:libB" ])
+
+CppSource(
+    name = "f2",
+    hdrs = [ "f2.hpp" ],
+    srcs = [ "f2.cpp" ],
+    private_deps = [ ":f1" ])
+
+CppExecutable(
+    name = "main1",
+    srcs = [ "main1.cpp" ],
+    private_deps = [ ":f1",
+                     ":f2" ])
+
 """
 
 def cmdOutput(cmd):
@@ -88,6 +156,13 @@ def replaceTargetType(content, target_name, old_type, new_type):
     tmp0 = new_type.join(tmp[0].rsplit(old_type, 1))
     return tmp0 + f'"{target_name}"' + tmp[1]
 
+def deleteIfExists(path):
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+    if os.path.isfile(path):
+        os.remove(path)
+
+
 class TestProject1(unittest.TestCase):
     build_files = ["dir1/BUILD"]
     PROJECT_DIR = os.path.abspath(os.path.dirname(__file__) + "/test_project1")
@@ -103,18 +178,15 @@ class TestProject1(unittest.TestCase):
 
     def clean(self):
         for build_file in self.build_files:
-            if os.path.isfile(f"{self.PROJECT_DIR}/{build_file}"):
-                os.remove(f"{self.PROJECT_DIR}/{build_file}")
-        if os.path.isdir(f"{self.PROJECT_DIR}/build"):
-            shutil.rmtree(f"{self.PROJECT_DIR}/build")
+            deleteIfExists(f"{self.PROJECT_DIR}/{build_file}")
+        deleteIfExists(f"{self.PROJECT_DIR}/build")
 
     def setUp(self):
-        return
         self.clean()
+        return
 
     def tearDown(self):
         self.clean()
-        return
 
     def test_main(self):
         self.assertClean()
@@ -125,11 +197,7 @@ class TestProject1(unittest.TestCase):
         writeFile(f"{self.PROJECT_DIR}/dir1/BUILD", content2)
         self.assertTrue(os.system(f"{self.PROJECT_DIR}/tools/depg_main.py .") == 0)
         self.assertEqual(readFile(f"{self.PROJECT_DIR}/dir1/BUILD"), content2)
-        self.assertTrue(os.system(f"{self.PROJECT_DIR}/tools/depg_main.py . --gen_cmake") == 0)
-        self.assertTrue(os.path.isfile(f"{self.PROJECT_DIR}/build/CMakeLists.txt"))
-        os.chdir(f"{self.PROJECT_DIR}/build")
-        self.assertTrue(os.system("cmake . && make") == 0)
-        self.assertEqual(cmdOutput("./dir1_main1"), PROJECT1_MAIN1_OUTPUT)
+        self.assertEqual(PROJECT1_DIR1_BUILD, content2)
 
 
 class TestProject2(unittest.TestCase):
@@ -147,10 +215,8 @@ class TestProject2(unittest.TestCase):
 
     def clean(self):
         for build_file in self.build_files:
-            if os.path.isfile(f"{self.PROJECT_DIR}/{build_file}"):
-                os.remove(f"{self.PROJECT_DIR}/{build_file}")
-        if os.path.isdir(f"{self.PROJECT_DIR}/build"):
-            shutil.rmtree(f"{self.PROJECT_DIR}/build")
+            deleteIfExists(f"{self.PROJECT_DIR}/{build_file}")
+        deleteIfExists(f"{self.PROJECT_DIR}/build")
 
     def setUp(self):
         self.clean()
@@ -158,7 +224,6 @@ class TestProject2(unittest.TestCase):
 
     def tearDown(self):
         self.clean()
-        return
 
     def test_main(self):
         self.assertClean()
@@ -172,12 +237,10 @@ class TestProject2(unittest.TestCase):
         self.assertTrue(os.system(f"{self.PROJECT_DIR}/tools/depg_main.py .") == 0)
         self.assertEqual(readFile(f"{self.PROJECT_DIR}/dir_main/BUILD"), content1)
         self.assertEqual(readFile(f"{self.PROJECT_DIR}/dir2/BUILD"), content2)
-        self.assertTrue(os.system(f"{self.PROJECT_DIR}/tools/depg_main.py . --gen_cmake") == 0)
-        self.assertTrue(os.path.isfile(f"{self.PROJECT_DIR}/build/CMakeLists.txt"))
-        os.chdir(f"{self.PROJECT_DIR}/build")
-        self.assertTrue(os.system("cmake . && make") == 0)
-        self.assertEqual(cmdOutput("./dir_main_main1"), PROJECT2_MAIN1_OUTPUT)
-        self.assertEqual(cmdOutput("./dir_main_main2"), PROJECT2_MAIN2_OUTPUT)
+        self.assertEqual(content1, PROJECT2_DIR_MAIN_BUILD)
+        self.assertEqual(content2, PROJECT2_DIR2_BUILD)
+        self.assertEqual(readFile(f"{self.PROJECT_DIR}/common/BUILD"), PROJECT2_COMMON_BUILD)
+        self.assertEqual(readFile(f"{self.PROJECT_DIR}/dir1/BUILD"), PROJECT2_DIR1_BUILD)
 
 
 class TestProject3(unittest.TestCase):
@@ -210,11 +273,7 @@ class TestProject3(unittest.TestCase):
         content2 = readFile(f"{self.PROJECT_DIR}/dir1/BUILD")
         self.assertTrue(os.system(f"{self.PROJECT_DIR}/tools/depg_main.py .") == 0)
         self.assertEqual(readFile(f"{self.PROJECT_DIR}/dir1/BUILD"), content2)
-        self.assertTrue(os.system(f"{self.PROJECT_DIR}/tools/depg_main.py . --gen_cmake") == 0)
-        self.assertTrue(os.path.isfile(f"{self.PROJECT_DIR}/build/CMakeLists.txt"))
-        os.chdir(f"{self.PROJECT_DIR}/build")
-        self.assertTrue(os.system("cmake . && make") == 0)
-        self.assertEqual(cmdOutput("./dir1_main1"), PROJECT3_MAIN1_OUTPUT)
+
 
 def makeToolchain(path, libs_map):
     for lib, (hdr, src) in libs_map.items():
@@ -224,6 +283,7 @@ def makeToolchain(path, libs_map):
         writeFile(f"{lib_path}/include/{lib}/{lib}.hpp", hdr)
         writeFile(f"{lib_path}/lib64/main.cpp", src)
         os.system(f"g++ -c {lib_path}/lib64/main.cpp -o {lib_path}/lib64/{lib}.o")
+
 
 class TestProject4(unittest.TestCase):
     build_files = ["dir1/BUILD"]
@@ -264,11 +324,7 @@ class TestProject4(unittest.TestCase):
         content2 = readFile(f"{self.PROJECT_DIR}/dir1/BUILD")
         self.assertTrue(os.system(f"{self.PROJECT_DIR}/tools/depg_main.py .") == 0)
         self.assertEqual(readFile(f"{self.PROJECT_DIR}/dir1/BUILD"), content2)
-        self.assertTrue(os.system(f"{self.PROJECT_DIR}/tools/depg_main.py . --gen_cmake --toolchain {self.TOOLCHAIN_PATH}") == 0)
-        self.assertTrue(os.path.isfile(f"{self.PROJECT_DIR}/build/CMakeLists.txt"))
-        os.chdir(f"{self.PROJECT_DIR}/build")
-        self.assertTrue(os.system("cmake . && make") == 0)
-        self.assertEqual(cmdOutput("./dir1_main1"), PROJECT4_MAIN1_OUTPUT)
+        self.assertEqual(PROJECT4_DIR1_BUILD, content2)
 
 
 if __name__ == '__main__':
