@@ -1,9 +1,3 @@
-#! /usr/bin/env python3
-
-# pylint: disable=missing-module-docstring,missing-function-docstring
-# pylint: disable=missing-class-docstring,too-many-return-statements
-# pylint: disable=invalid-name
-
 import os
 import json
 from collections import OrderedDict
